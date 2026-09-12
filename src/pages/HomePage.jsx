@@ -22,7 +22,7 @@ import {
 
 export default function HomePage() {
   const navigate = useNavigate();
-  const { stats, hospitals, showToast } = useEmergency();
+  const { stats, hospitals, showToast, triggerSimulatedCall } = useEmergency();
   const [activeFaq, setActiveFaq] = useState(null);
 
   const faqs = [
@@ -93,7 +93,15 @@ export default function HomePage() {
             "Connecting Chandigarh's emergency services for faster, smarter and safer response."
           </p>
 
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '4rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap', marginBottom: '3.5rem' }}>
+            <button 
+              onClick={() => triggerSimulatedCall('Emergency Services', '112')}
+              className="btn btn-sos" 
+              style={{ padding: '1rem 2rem', fontSize: '1rem', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <PhoneCall size={20} />
+              CALL 112 DIRECT
+            </button>
             <NavLink to="/emergency" className="btn btn-primary" style={{ padding: '1rem 2rem', fontSize: '1rem' }}>
               <ShieldAlert size={20} />
               REPORT EMERGENCY
@@ -102,6 +110,36 @@ export default function HomePage() {
               <Activity size={20} />
               EXPLORE COMMAND CENTER
             </NavLink>
+          </div>
+
+          {/* Requirement 8: Compact Visual How It Works Flow */}
+          <div className="glass-panel" style={{ padding: '1.75rem', marginBottom: '3.5rem', backgroundColor: 'var(--bg-surface-solid)' }}>
+            <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-primary)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '1rem' }}>
+              Emergency Response Lifecycle
+            </div>
+            <div style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))',
+              gap: '0.75rem',
+              alignItems: 'center'
+            }}>
+              {[
+                { step: '1', title: 'SOS', desc: 'Trigger Signal', color: '#DC2626' },
+                { step: '2', title: 'Locate', desc: 'Sector GPS', color: '#2563EB' },
+                { step: '3', title: 'Classify', desc: 'Triage Level', color: '#F59E0B' },
+                { step: '4', title: 'Dispatch', desc: 'Mobilize Units', color: '#8B5CF6' },
+                { step: '5', title: 'Track', desc: 'Live Telemetry', color: '#06B6D4' },
+                { step: '6', title: 'Resolve', desc: 'Hospital Transfer', color: '#22C55E' }
+              ].map(s => (
+                <div key={s.step} style={{ padding: '0.85rem 0.5rem', background: 'rgba(255,255,255,0.02)', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
+                  <div style={{ width: 28, height: 28, borderRadius: '50%', background: s.color, color: '#FFF', fontWeight: 800, fontSize: '0.8rem', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 0.4rem auto' }}>
+                    {s.step}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800 }}>{s.title}</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{s.desc}</div>
+                </div>
+              ))}
+            </div>
           </div>
 
           {/* Trust Indicators */}

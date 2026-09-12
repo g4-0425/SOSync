@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEmergency } from '../context/EmergencyContext';
 import { emergencyTypes } from '../data/mockDatabase';
-import { ShieldAlert, Send, CheckCircle2, MapPin, Phone, User, AlertOctagon } from 'lucide-react';
+import { ShieldAlert, Send, CheckCircle2, MapPin, Phone, User, AlertOctagon, PhoneCall } from 'lucide-react';
 
 export default function EmergencyReportPage() {
   const navigate = useNavigate();
-  const { addEmergencyReport } = useEmergency();
+  const { addEmergencyReport, triggerSimulatedCall } = useEmergency();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -39,27 +39,33 @@ export default function EmergencyReportPage() {
   return (
     <div className="page-animate" style={{ paddingTop: '6rem', paddingBottom: '5rem' }}>
       <div className="container" style={{ maxWidth: 850 }}>
-        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
-          <div style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '0.5rem',
-            padding: '0.35rem 1rem',
-            borderRadius: 30,
-            fontSize: '0.85rem',
-            fontWeight: 700,
-            background: 'rgba(220, 38, 38, 0.12)',
-            color: 'var(--color-primary)',
-            border: '1px solid rgba(220, 38, 38, 0.25)',
-            marginBottom: '1rem'
-          }}>
-            <ShieldAlert size={16} />
-            <span>Emergency Reporting Portal</span>
+        <div style={{ textAlign: 'center', marginBottom: '2.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              padding: '0.35rem 1rem',
+              borderRadius: 30,
+              fontSize: '0.85rem',
+              fontWeight: 700,
+              background: 'rgba(220, 38, 38, 0.12)',
+              color: 'var(--color-primary)',
+              border: '1px solid rgba(220, 38, 38, 0.25)'
+            }}>
+              <ShieldAlert size={16} />
+              <span>Emergency Reporting Portal</span>
+            </div>
+
+            <button onClick={() => triggerSimulatedCall('Emergency Services', '112')} className="btn btn-sos" style={{ padding: '0.35rem 1rem', fontSize: '0.85rem', textDecoration: 'none' }}>
+              <PhoneCall size={16} />
+              CALL 112 DIRECT
+            </button>
           </div>
 
           <h1 style={{ fontSize: '2.5rem', fontWeight: 900 }}>Dispatch Immediate Emergency Aid</h1>
           <p style={{ color: 'var(--text-muted)', fontSize: '1.1rem', maxWidth: 600, margin: '0.5rem auto 0 auto' }}>
-            Fill in incident details below. SOSync algorithms automatically mobilize the closest Chandigarh paramedics, fire tenders, and police patrols.
+            Fill in incident details below. SOSync rule-based algorithm mobilizes closest Chandigarh paramedics, fire tenders, and police patrols while recommending optimal ER wards.
           </p>
         </div>
 

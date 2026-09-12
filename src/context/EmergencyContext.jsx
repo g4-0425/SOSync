@@ -30,6 +30,27 @@ export function EmergencyProvider({ children }) {
     setTimeout(() => setToast(null), 4000);
   }, []);
 
+  const triggerSimulatedCall = useCallback((targetName, targetDetail = '') => {
+    let message = '';
+    if (targetName && targetName.startsWith('Calling')) {
+      message = targetName;
+    } else if (targetDetail) {
+      message = `Calling ${targetName} — ${targetDetail}`;
+    } else {
+      message = `Calling ${targetName}`;
+    }
+
+    setToast({
+      id: Date.now(),
+      message,
+      type: 'call'
+    });
+
+    setTimeout(() => {
+      setToast(prev => (prev && prev.type === 'call' ? null : prev));
+    }, 2500);
+  }, []);
+
   const addNotification = useCallback((text, type = 'info') => {
     const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
     setNotifications(prev => [
@@ -162,6 +183,7 @@ export function EmergencyProvider({ children }) {
       toast,
       stats,
       showToast,
+      triggerSimulatedCall,
       addEmergencyReport,
       drawRoute,
       clearRoute

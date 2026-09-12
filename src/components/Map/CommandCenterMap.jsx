@@ -1,14 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useEmergency } from '../../context/EmergencyContext';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
-export default function CommandCenterMap() {
+export default function CommandCenterMap({ focusedCoords = null }) {
   const mapRef = useRef(null);
   const leafletInstance = useRef(null);
   const polylineInstance = useRef(null);
-  const markersRef = useRef([]);
+
+  const [filterCategory, setFilterCategory] = useState('all');
 
   const {
     hospitals,
@@ -68,6 +69,13 @@ export default function CommandCenterMap() {
     };
   }, []);
 
+  // Handle focusedCoords prop change (center & zoom on map)
+  useEffect(() => {
+    if (leafletInstance.current && focusedCoords) {
+      leafletInstance.current.flyTo(focusedCoords, 14, { duration: 1.2 });
+    }
+  }, [focusedCoords]);
+
   // Helper to attach mouseover/mouseout popup behavior to markers
   const attachHoverPopup = (marker) => {
     let hideTimer = null;
@@ -98,7 +106,7 @@ export default function CommandCenterMap() {
 
   const activeMarkersRef = useRef({});
 
-  // Render & Update Markers on Data Change
+  // Render & Update Markers on Data / Filter Change
   useEffect(() => {
     const map = leafletInstance.current;
     if (!map) return;
@@ -106,154 +114,164 @@ export default function CommandCenterMap() {
     const currentKeys = new Set();
 
     // 1. Hospitals (Blue)
-    hospitals.forEach(h => {
-      const key = `hosp-${h.id}`;
-      currentKeys.add(key);
+    if (filterCategory === 'all' || filterCategory === 'hospitals') {
+      hospitals.forEach(h => {
+        const key = `hosp-${h.id}`;
+        currentKeys.add(key);
 
-      if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
-        activeMarkersRef.current[key].setLatLng(h.coords);
-      } else {
-        const marker = L.marker(h.coords, { icon: createDivIcon('cc-marker-hospital', '🏥') })
-          .addTo(map)
-          .bindPopup(`
-            <div style="font-family:sans-serif; min-width:200px; color:#F8FAFC">
-              <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${h.name}</h4>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Status:</strong> <span style="color:#22C55E">${h.status}</span></div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Available Beds:</strong> ${h.bedsAvailable} / ${h.totalBeds}</div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>ICU Beds:</strong> ${h.icuBeds}</div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Doctors:</strong> ${h.doctors}</div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Emergency Phone:</strong> ${h.phone}</div>
-            </div>
-          `);
-        attachHoverPopup(marker);
-        activeMarkersRef.current[key] = marker;
-      }
-    });
+        if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
+          activeMarkersRef.current[key].setLatLng(h.coords);
+        } else {
+          const marker = L.marker(h.coords, { icon: createDivIcon('cc-marker-hospital', '🏥') })
+            .addTo(map)
+            .bindPopup(`
+              <div style="font-family:sans-serif; min-width:200px; color:#F8FAFC">
+                <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${h.name}</h4>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Status:</strong> <span style="color:#22C55E">${h.status}</span></div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Available Beds:</strong> ${h.bedsAvailable} / ${h.totalBeds}</div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>ICU Beds:</strong> ${h.icuBeds}</div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Doctors:</strong> ${h.doctors}</div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Emergency Phone:</strong> ${h.phone}</div>
+              </div>
+            `);
+          attachHoverPopup(marker);
+          activeMarkersRef.current[key] = marker;
+        }
+      });
+    }
 
     // 2. Police Stations (Dark Navy)
-    policeUnits.forEach(p => {
-      const key = `police-${p.station}`;
-      currentKeys.add(key);
+    if (filterCategory === 'all' || filterCategory === 'police') {
+      policeUnits.forEach(p => {
+        const key = `police-${p.station}`;
+        currentKeys.add(key);
 
-      if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
-        activeMarkersRef.current[key].setLatLng(p.coords);
-      } else {
-        const marker = L.marker(p.coords, { icon: createDivIcon('cc-marker-police', '👮') })
-          .addTo(map)
-          .bindPopup(`
-            <div style="font-family:sans-serif; min-width:200px; color:#F8FAFC">
-              <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${p.station}</h4>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Officer:</strong> ${p.officer}</div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Units Ready:</strong> ${p.unitsAvailable}</div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Active Case:</strong> ${p.activeCase}</div>
-            </div>
-          `);
-        attachHoverPopup(marker);
-        activeMarkersRef.current[key] = marker;
-      }
-    });
+        if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
+          activeMarkersRef.current[key].setLatLng(p.coords);
+        } else {
+          const marker = L.marker(p.coords, { icon: createDivIcon('cc-marker-police', '👮') })
+            .addTo(map)
+            .bindPopup(`
+              <div style="font-family:sans-serif; min-width:200px; color:#F8FAFC">
+                <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${p.station}</h4>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Officer:</strong> ${p.officer}</div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Units Ready:</strong> ${p.unitsAvailable}</div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Active Case:</strong> ${p.activeCase}</div>
+              </div>
+            `);
+          attachHoverPopup(marker);
+          activeMarkersRef.current[key] = marker;
+        }
+      });
+    }
 
     // 3. Fire Stations (Orange)
-    fireStations.forEach(f => {
-      const key = `fire-${f.station}`;
-      currentKeys.add(key);
+    if (filterCategory === 'all' || filterCategory === 'fire') {
+      fireStations.forEach(f => {
+        const key = `fire-${f.station}`;
+        currentKeys.add(key);
 
-      if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
-        activeMarkersRef.current[key].setLatLng(f.coords);
-      } else {
-        const marker = L.marker(f.coords, { icon: createDivIcon('cc-marker-fire', '🚒') })
-          .addTo(map)
-          .bindPopup(`
-            <div style="font-family:sans-serif; min-width:200px; color:#F8FAFC">
-              <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${f.station}</h4>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Fire Trucks:</strong> ${f.trucksAvailable}</div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Firefighters:</strong> ${f.firefighters}</div>
-              <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Incident:</strong> ${f.currentIncident}</div>
-            </div>
-          `);
-        attachHoverPopup(marker);
-        activeMarkersRef.current[key] = marker;
-      }
-    });
+        if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
+          activeMarkersRef.current[key].setLatLng(f.coords);
+        } else {
+          const marker = L.marker(f.coords, { icon: createDivIcon('cc-marker-fire', '🚒') })
+            .addTo(map)
+            .bindPopup(`
+              <div style="font-family:sans-serif; min-width:200px; color:#F8FAFC">
+                <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${f.station}</h4>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Fire Trucks:</strong> ${f.trucksAvailable}</div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Firefighters:</strong> ${f.firefighters}</div>
+                <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Incident:</strong> ${f.currentIncident}</div>
+              </div>
+            `);
+          attachHoverPopup(marker);
+          activeMarkersRef.current[key] = marker;
+        }
+      });
+    }
 
     // 4. Ambulances (Red Siren)
-    ambulances.forEach(a => {
-      const key = `amb-${a.id}`;
-      currentKeys.add(key);
+    if (filterCategory === 'all' || filterCategory === 'ambulances') {
+      ambulances.forEach(a => {
+        const key = `amb-${a.id}`;
+        currentKeys.add(key);
 
-      if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
-        activeMarkersRef.current[key].setLatLng(a.coords);
-      } else {
-        const popupDiv = document.createElement('div');
-        popupDiv.style.fontFamily = 'sans-serif';
-        popupDiv.style.minWidth = '210px';
-        popupDiv.style.color = '#F8FAFC';
-        popupDiv.innerHTML = `
-          <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${a.id}</h4>
-          <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Driver:</strong> ${a.driver}</div>
-          <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Status:</strong> <span style="color:${a.status === 'Available' ? '#22C55E' : '#F59E0B'}">${a.status}</span></div>
-          <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Location:</strong> ${a.sector}</div>
-          <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Destination:</strong> ${a.destination}</div>
-          <div style="font-size:0.85rem; margin-bottom:0.6rem"><strong>ETA:</strong> ${a.eta}</div>
-          <button class="btn btn-primary view-route-btn" style="width:100%; padding:0.4rem; font-size:0.75rem; cursor:pointer">VIEW ROUTE</button>
-        `;
+        if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
+          activeMarkersRef.current[key].setLatLng(a.coords);
+        } else {
+          const popupDiv = document.createElement('div');
+          popupDiv.style.fontFamily = 'sans-serif';
+          popupDiv.style.minWidth = '210px';
+          popupDiv.style.color = '#F8FAFC';
+          popupDiv.innerHTML = `
+            <h4 style="font-size:1.05rem; margin-bottom:0.5rem; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:0.35rem">${a.id}</h4>
+            <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Driver:</strong> ${a.driver}</div>
+            <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Status:</strong> <span style="color:${a.status === 'Available' ? '#22C55E' : '#F59E0B'}">${a.status}</span></div>
+            <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Location:</strong> ${a.sector}</div>
+            <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Destination:</strong> ${a.destination}</div>
+            <div style="font-size:0.85rem; margin-bottom:0.6rem"><strong>ETA:</strong> ${a.eta}</div>
+            <button class="btn btn-primary view-route-btn" style="width:100%; padding:0.4rem; font-size:0.75rem; cursor:pointer">VIEW ROUTE</button>
+          `;
 
-        const btn = popupDiv.querySelector('.view-route-btn');
-        if (btn) {
-          btn.addEventListener('click', () => {
-            const targetEmergency = emergencies.find(e => e.id === a.assignedEmergencyId) || emergencies[0];
-            if (targetEmergency) {
-              drawRoute(a.coords, targetEmergency.coords, a.id);
-            }
-          });
+          const btn = popupDiv.querySelector('.view-route-btn');
+          if (btn) {
+            btn.addEventListener('click', () => {
+              const targetEmergency = emergencies.find(e => e.id === a.assignedEmergencyId) || emergencies[0];
+              if (targetEmergency) {
+                drawRoute(a.coords, targetEmergency.coords, a.id);
+              }
+            });
+          }
+
+          const marker = L.marker(a.coords, { icon: createDivIcon('cc-marker-ambulance', '🚑') })
+            .addTo(map)
+            .bindPopup(popupDiv);
+          attachHoverPopup(marker);
+          activeMarkersRef.current[key] = marker;
         }
-
-        const marker = L.marker(a.coords, { icon: createDivIcon('cc-marker-ambulance', '🚑') })
-          .addTo(map)
-          .bindPopup(popupDiv);
-        attachHoverPopup(marker);
-        activeMarkersRef.current[key] = marker;
-      }
-    });
+      });
+    }
 
     // 5. Active Emergencies (Pulsing Red)
-    emergencies.forEach(e => {
-      const key = `emg-${e.id}`;
-      currentKeys.add(key);
+    if (filterCategory === 'all' || filterCategory === 'emergencies') {
+      emergencies.forEach(e => {
+        const key = `emg-${e.id}`;
+        currentKeys.add(key);
 
-      if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
-        activeMarkersRef.current[key].setLatLng(e.coords);
-      } else {
-        const popupDiv = document.createElement('div');
-        popupDiv.style.fontFamily = 'sans-serif';
-        popupDiv.style.minWidth = '220px';
-        popupDiv.style.color = '#F8FAFC';
-        popupDiv.innerHTML = `
-          <h4 style="font-size:1.05rem; margin-bottom:0.3rem; color:#EF4444">${e.type}</h4>
-          <div style="font-size:0.75rem; color:#94A3B8; margin-bottom:0.5rem">ID: ${e.id} | Priority: <strong>${e.priority}</strong></div>
-          <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Sector:</strong> ${e.sector}</div>
-          <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Status:</strong> ${e.status}</div>
-          <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Assigned:</strong> ${e.assignedAmbulance || 'Dispatch Pending'}</div>
-          <div style="font-size:0.85rem; margin-bottom:0.6rem"><strong>Nearest Hosp:</strong> ${e.nearestHospital}</div>
-          <button class="btn btn-accent view-details-btn" style="width:100%; padding:0.4rem; font-size:0.75rem; cursor:pointer">VIEW DETAILS & TIMELINE</button>
-        `;
+        if (activeMarkersRef.current[key] && activeMarkersRef.current[key]._map === map) {
+          activeMarkersRef.current[key].setLatLng(e.coords);
+        } else {
+          const popupDiv = document.createElement('div');
+          popupDiv.style.fontFamily = 'sans-serif';
+          popupDiv.style.minWidth = '220px';
+          popupDiv.style.color = '#F8FAFC';
+          popupDiv.innerHTML = `
+            <h4 style="font-size:1.05rem; margin-bottom:0.3rem; color:#EF4444">${e.type}</h4>
+            <div style="font-size:0.75rem; color:#94A3B8; margin-bottom:0.5rem">ID: ${e.id} | Priority: <strong>${e.priority}</strong></div>
+            <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Sector:</strong> ${e.sector}</div>
+            <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Status:</strong> ${e.status}</div>
+            <div style="font-size:0.85rem; margin-bottom:0.3rem"><strong>Assigned:</strong> ${e.assignedAmbulance || 'Dispatch Pending'}</div>
+            <div style="font-size:0.85rem; margin-bottom:0.6rem"><strong>Nearest Hosp:</strong> ${e.nearestHospital}</div>
+            <button class="btn btn-accent view-details-btn" style="width:100%; padding:0.4rem; font-size:0.75rem; cursor:pointer">VIEW DETAILS & TIMELINE</button>
+          `;
 
-        const btn = popupDiv.querySelector('.view-details-btn');
-        if (btn) {
-          btn.addEventListener('click', () => {
-            navigate(`/emergency/${e.id}`);
-          });
+          const btn = popupDiv.querySelector('.view-details-btn');
+          if (btn) {
+            btn.addEventListener('click', () => {
+              navigate(`/emergency/${e.id}`);
+            });
+          }
+
+          const marker = L.marker(e.coords, { icon: createDivIcon('cc-marker-emergency', '🚨') })
+            .addTo(map)
+            .bindPopup(popupDiv);
+          attachHoverPopup(marker);
+          activeMarkersRef.current[key] = marker;
         }
+      });
+    }
 
-        const marker = L.marker(e.coords, { icon: createDivIcon('cc-marker-emergency', '🚨') })
-          .addTo(map)
-          .bindPopup(popupDiv);
-        attachHoverPopup(marker);
-        activeMarkersRef.current[key] = marker;
-      }
-    });
-
-    // Cleanup keys no longer present
+    // Cleanup keys no longer matching active filter
     Object.keys(activeMarkersRef.current).forEach(key => {
       if (!currentKeys.has(key)) {
         activeMarkersRef.current[key].remove();
@@ -261,7 +279,7 @@ export default function CommandCenterMap() {
       }
     });
 
-  }, [hospitals, ambulances, policeUnits, fireStations, emergencies, drawRoute, navigate]);
+  }, [hospitals, ambulances, policeUnits, fireStations, emergencies, filterCategory, drawRoute, navigate]);
 
   // Handle Polyline Route Drawing
   useEffect(() => {
@@ -287,8 +305,58 @@ export default function CommandCenterMap() {
     }
   }, [selectedRoute]);
 
+  const categories = [
+    { id: 'all', label: 'All Markers', icon: '📍' },
+    { id: 'emergencies', label: 'Emergencies', icon: '🚨' },
+    { id: 'hospitals', label: 'Hospitals', icon: '🏥' },
+    { id: 'ambulances', label: 'Ambulances', icon: '🚑' },
+    { id: 'fire', label: 'Fire', icon: '🚒' },
+    { id: 'police', label: 'Police', icon: '👮' }
+  ];
+
   return (
     <div style={{ position: 'relative', width: '100%', height: '100%', minHeight: '550px' }}>
+      {/* Category Filter Bar */}
+      <div style={{
+        position: 'absolute',
+        top: 15,
+        right: 15,
+        zIndex: 1000,
+        display: 'flex',
+        gap: '0.35rem',
+        background: 'rgba(15, 23, 42, 0.85)',
+        backdropFilter: 'blur(12px)',
+        padding: '0.4rem',
+        borderRadius: 'var(--border-radius-sm)',
+        border: '1px solid var(--border-color)',
+        boxShadow: 'var(--shadow-md)',
+        flexWrap: 'wrap'
+      }}>
+        {categories.map(cat => (
+          <button
+            key={cat.id}
+            onClick={() => setFilterCategory(cat.id)}
+            style={{
+              padding: '0.35rem 0.75rem',
+              borderRadius: '4px',
+              fontSize: '0.75rem',
+              fontWeight: 700,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.35rem',
+              background: filterCategory === cat.id ? 'var(--color-primary)' : 'transparent',
+              color: filterCategory === cat.id ? '#FFFFFF' : 'var(--text-muted)',
+              border: filterCategory === cat.id ? '1px solid var(--color-primary)' : '1px solid transparent',
+              transition: 'all 0.2s'
+            }}
+          >
+            <span>{cat.icon}</span>
+            <span>{cat.label}</span>
+          </button>
+        ))}
+      </div>
+
       <div ref={mapRef} className="command-center-map" style={{ width: '100%', height: '100%', borderRadius: 'var(--border-radius-md)' }} />
       {selectedRoute && (
         <button 

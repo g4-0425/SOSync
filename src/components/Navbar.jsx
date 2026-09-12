@@ -17,13 +17,14 @@ import {
   MapPin,
   HeartPulse,
   Activity,
-  FileText
+  FileText,
+  PhoneCall
 } from 'lucide-react';
 
 export default function Navbar({ onOpenLogin }) {
   const { isDark, toggleTheme } = useTheme();
   const { user, isAuthenticated, logout } = useAuth();
-  const { notifications, showToast } = useEmergency();
+  const { notifications, showToast, triggerSimulatedCall } = useEmergency();
   const navigate = useNavigate();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -156,8 +157,28 @@ export default function Navbar({ onOpenLogin }) {
             {isDark ? <Sun size={18} /> : <Moon size={18} />}
           </button>
 
+          {/* CALL 112 Direct Dial Button */}
+          <button 
+            onClick={() => triggerSimulatedCall('Emergency Services', '112')}
+            className="btn btn-sos" 
+            style={{ 
+              padding: '0.6rem 1.1rem', 
+              fontSize: '0.85rem', 
+              backgroundColor: '#DC2626',
+              border: 'none',
+              cursor: 'pointer',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '0.4rem'
+            }}
+            title="Direct Dial National Emergency Service"
+          >
+            <PhoneCall size={16} />
+            CALL 112
+          </button>
+
           {/* SOS Emergency Button */}
-          <button onClick={handleSosClick} className="btn btn-sos" style={{ padding: '0.6rem 1.25rem', fontSize: '0.85rem' }}>
+          <button onClick={handleSosClick} className="btn btn-secondary" style={{ padding: '0.6rem 1rem', fontSize: '0.85rem', color: '#EF4444', borderColor: 'rgba(220, 38, 38, 0.4)' }}>
             <AlertOctagon size={16} />
             SOS
           </button>

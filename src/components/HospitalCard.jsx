@@ -3,7 +3,7 @@ import { useEmergency } from '../context/EmergencyContext';
 import { MapPin, Phone, Bed, UserCheck, Star, Navigation } from 'lucide-react';
 
 export default function HospitalCard({ hospital }) {
-  const { drawRoute, showToast } = useEmergency();
+  const { drawRoute, showToast, triggerSimulatedCall } = useEmergency();
 
   const handleRouteClick = () => {
     // Standard Chandigarh coordinate center
@@ -78,10 +78,10 @@ export default function HospitalCard({ hospital }) {
         </div>
 
         <div style={{ marginTop: 'auto', display: 'flex', gap: '0.75rem' }}>
-          <a href={`tel:${hospital.phone}`} className="btn btn-secondary" style={{ flexGrow: 1, padding: '0.6rem', fontSize: '0.8rem' }}>
+          <button onClick={() => triggerSimulatedCall('Hospital', hospital.name)} className="btn btn-secondary" style={{ flexGrow: 1, padding: '0.6rem', fontSize: '0.8rem' }}>
             <Phone size={14} />
             Call ER
-          </a>
+          </button>
           <button onClick={handleRouteClick} className="btn btn-primary" style={{ flexGrow: 1, padding: '0.6rem', fontSize: '0.8rem' }}>
             <Navigation size={14} />
             View Route

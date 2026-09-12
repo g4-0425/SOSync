@@ -3,15 +3,17 @@ import { useParams, NavLink, useNavigate } from 'react-router-dom';
 import { useEmergencyData } from '../hooks/useEmergencyData';
 import { useEmergency } from '../context/EmergencyContext';
 import Timeline from '../components/Timeline';
+import { recommendHospitals } from '../utils/hospitalRecommender';
 import { ShieldAlert, MapPin, User, Phone, Clock, ArrowLeft, Navigation, Building2, Truck, Shield } from 'lucide-react';
 
 export default function EmergencyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { findEmergencyById } = useEmergencyData();
-  const { drawRoute } = useEmergency();
+  const { drawRoute, hospitals, triggerSimulatedCall } = useEmergency();
 
   const emergency = findEmergencyById(id);
+  const recommendation = emergency ? recommendHospitals(emergency, hospitals) : { primary: null, alternatives: [] };
 
   if (!emergency) {
     return (
@@ -75,9 +77,45 @@ export default function EmergencyDetailPage() {
 
           {/* Timeline Section */}
           <div style={{ marginBottom: '2rem', background: 'rgba(255,255,255,0.02)', padding: '1.5rem', borderRadius: 'var(--border-radius-sm)', border: '1px solid var(--border-color)' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '1rem' }}>Dispatch Progress Timeline</h3>
-            <Timeline currentStatus={emergency.status} />
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, marginBottom: '0.5rem' }}>Dispatch Progress Timeline</h3>
+            <Timeline currentStatus={emergency.status} reportedTime={emergency.reportedTime} />
           </div>
+
+          {/* Smart Hospital Recommendation Section */}
+          {recommendation.primary && (
+            <div style={{ marginBottom: '2rem', background: 'rgba(37, 99, 235, 0.06)', border: '1px solid rgba(37, 99, 235, 0.3)', borderRadius: 'var(--border-radius-sm)', padding: '1.5rem' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--color-accent)', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.5rem' }}>
+                Smart Hospital Recommendation (Scoring Algorithm)
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1rem' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text-main)' }}>{recommendation.primary.name}</h3>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                    <strong>Suitability:</strong> {recommendation.primary.suitabilityReason}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', fontSize: '0.85rem' }}>
+                  <div><strong>ICU Availability:</strong> <span style={{ color: recommendation.primary.icuBeds > 0 ? '#22C55E' : '#EF4444', fontWeight: 700 }}>{recommendation.primary.icuBeds} ICU Beds Ready</span></div>
+                  <div><strong>Status:</strong> <span style={{ color: '#22C55E', fontWeight: 700 }}>{recommendation.primary.status}</span></div>
+                  <div><strong>Available ER Beds:</strong> {recommendation.primary.bedsAvailable} / {recommendation.primary.totalBeds}</div>
+                </div>
+              </div>
+
+              {/* Alternative Hospitals */}
+              {recommendation.alternatives.length > 0 && (
+                <div style={{ marginTop: '1rem', paddingTop: '0.85rem', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-light)', marginBottom: '0.4rem' }}>ALTERNATIVE BACKUP HOSPITALS:</div>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    {recommendation.alternatives.map(alt => (
+                      <div key={alt.id} style={{ fontSize: '0.8rem', background: 'rgba(255,255,255,0.03)', padding: '0.4rem 0.75rem', borderRadius: '4px', border: '1px solid var(--border-color)' }}>
+                        <strong>{alt.name}</strong> • ICU: {alt.icuBeds} beds • <span style={{ color: '#22C55E' }}>{alt.status}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Incident Details Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
@@ -121,10 +159,10 @@ export default function EmergencyDetailPage() {
               <Navigation size={18} />
               TRACK ON COMMAND CENTER MAP
             </button>
-            <a href={`tel:${emergency.reporterPhone}`} className="btn btn-secondary" style={{ padding: '0.8rem 1.5rem' }}>
+            <button onClick={() => triggerSimulatedCall('Dispatch Desk', emergency.reporterPhone)} className="btn btn-secondary" style={{ padding: '0.8rem 1.5rem' }}>
               <Phone size={18} />
               CALL DISPATCH DESK
-            </a>
+            </button>
           </div>
         </div>
       </div>

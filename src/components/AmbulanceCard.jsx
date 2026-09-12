@@ -3,7 +3,7 @@ import { useEmergency } from '../context/EmergencyContext';
 import { Truck, User, MapPin, Clock, Phone, Navigation } from 'lucide-react';
 
 export default function AmbulanceCard({ ambulance }) {
-  const { drawRoute, showToast } = useEmergency();
+  const { drawRoute, showToast, triggerSimulatedCall } = useEmergency();
 
   const handleRouteClick = () => {
     drawRoute(ambulance.coords, [30.7390, 76.7590], ambulance.id);
@@ -59,10 +59,10 @@ export default function AmbulanceCard({ ambulance }) {
       </div>
 
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
-        <a href={`tel:${ambulance.phone}`} className="btn btn-secondary" style={{ flexGrow: 1, padding: '0.55rem', fontSize: '0.8rem' }}>
+        <button onClick={() => triggerSimulatedCall('Ambulance Driver', ambulance.driver)} className="btn btn-secondary" style={{ flexGrow: 1, padding: '0.55rem', fontSize: '0.8rem' }}>
           <Phone size={14} />
           Contact
-        </a>
+        </button>
         <button onClick={handleRouteClick} className="btn btn-primary" style={{ flexGrow: 1, padding: '0.55rem', fontSize: '0.8rem' }}>
           <Navigation size={14} />
           Track GPS
