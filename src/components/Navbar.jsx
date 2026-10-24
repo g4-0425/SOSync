@@ -82,16 +82,64 @@ export default function Navbar({ onOpenLogin }) {
           alignItems: 'center',
           gap: '1.25rem'
         }}>
-          <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Home</NavLink>
-          <NavLink to="/command-center" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Command Center</NavLink>
-          <NavLink to="/emergency" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Report Emergency</NavLink>
-          <NavLink to="/dashboard" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Dashboard</NavLink>
-          <NavLink to="/hospitals" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Hospitals</NavLink>
-          <NavLink to="/ambulances" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Ambulances</NavLink>
-          <NavLink to="/history" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>History</NavLink>
-          <NavLink to="/reports" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Reports</NavLink>
-          <NavLink to="/about" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>About</NavLink>
-          <NavLink to="/contact" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}>Contact</NavLink>
+          {/* Define role‑based navigation */}
+          {(() => {
+            // Common links visible to all users (including unauthenticated)
+            const commonLinks = [
+              { to: '/', label: 'Home', end: true },
+              { to: '/emergency', label: 'Report Emergency' }
+            ];
+
+            // Role‑specific navigation configuration
+            const roleLinks = {
+              citizen: [
+                { to: '/dashboard', label: 'Dashboard' },
+                { to: '/history', label: 'History' }
+              ],
+              dispatcher: [
+                { to: '/command-center', label: 'Command Center' },
+                { to: '/dashboard', label: 'Dashboard' },
+                { to: '/reports', label: 'Reports' }
+              ],
+              responder: [
+                { to: '/dashboard', label: 'Dashboard' },
+                { to: '/ambulances', label: 'Ambulances' }
+              ],
+              hospital: [
+                { to: '/hospitals', label: 'Hospitals' },
+                { to: '/dashboard', label: 'Dashboard' }
+              ],
+              police: [
+                { to: '/dashboard', label: 'Dashboard' },
+                { to: '/reports', label: 'Reports' }
+              ],
+              admin: [
+                { to: '/admin', label: 'Admin Panel' },
+                { to: '/dashboard', label: 'Dashboard' }
+              ]
+            };
+
+            // Build final link list based on authentication and role
+            let links = [...commonLinks];
+            if (isAuthenticated && user?.role && roleLinks[user.role]) {
+              links = links.concat(roleLinks[user.role]);
+            }
+
+            // Add public informational pages (About, Contact) for all users
+            links.push({ to: '/about', label: 'About' });
+            links.push({ to: '/contact', label: 'Contact' });
+
+            return links.map((link, idx) => (
+              <NavLink
+                key={idx}
+                to={link.to}
+                end={link.end}
+                className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`}
+              >
+                {link.label}
+              </NavLink>
+            ));
+          })()}
         </nav>
 
         {/* Right Actions */}

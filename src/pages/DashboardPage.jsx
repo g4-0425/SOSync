@@ -16,7 +16,7 @@ import {
   PieChart,
   Lock,
   UserCheck
-} from 'lucide-react';
+} from 'lucide-react'; 
 
 export default function DashboardPage() {
   const { stats, emergencies, ambulances, hospitals } = useEmergency();

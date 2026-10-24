@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import { getHospitals, getAmbulances, getAgencyOfficers, postEmergency } from '../utils/apiClient';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import {
   initialEmergencies,
@@ -60,8 +61,15 @@ export function EmergencyProvider({ children }) {
   }, []);
 
   // Add new emergency report
-  const addEmergencyReport = useCallback((reportData) => {
-    const newId = `EMG-${Math.floor(1000 + Math.random() * 9000)}`;
+  const addEmergencyReport = useCallback(async (reportData) => {
+    let backendResult = null;
+    try {
+      backendResult = await postEmergency(reportData);
+    } catch (e) {
+      console.warn('Backend postEmergency error', e);
+    }
+    // If backend returns a created emergency, use it; otherwise fallback to mock generation
+    const fallbackId = `EMG-${Math.floor(1000 + Math.random() * 9000)}`;
     const now = new Date();
     const formattedDate = `${now.toISOString().split('T')[0]} ${now.toLocaleTimeString()}`;
 
@@ -77,29 +85,36 @@ export function EmergencyProvider({ children }) {
 
     const targetCoords = sectorsCoords[reportData.sector] || [30.7333 + (Math.random() - 0.5) * 0.04, 76.7794 + (Math.random() - 0.5) * 0.04];
 
-    const newReport = {
-      id: newId,
-      reporterName: reportData.fullName || 'Anonymous Citizen',
-      reporterPhone: reportData.phone || '+91 99000 00000',
-      type: reportData.emergencyType || 'General Emergency',
-      sector: reportData.sector || 'Sector 22',
-      coords: targetCoords,
-      priority: reportData.priority || 'High',
-      description: reportData.description || 'Emergency alert logged via mobile portal.',
-      reportedTime: formattedDate,
-      assignedAmbulance: 'Amb A-102',
-      assignedPolice: 'POL-17',
-      nearestHospital: 'PGIMER Chandigarh',
-      status: 'Responder On Route',
-      responseTime: '4.0 Min'
-    };
+    let newReport;
+    if (backendResult && backendResult.id) {
+      // Assume backend returns full emergency object
+      newReport = backendResult;
+    } else {
+      
+      newReport = {
+        id: fallbackId,
+        reporterName: reportData.fullName || 'Anonymous Citizen',
+        reporterPhone: reportData.phone || '+91 99000 00000',
+        type: reportData.emergencyType || 'General Emergency',
+        sector: reportData.sector || 'Sector 22',
+        coords: targetCoords,
+        priority: reportData.priority || 'High',
+        description: reportData.description || 'Emergency alert logged via mobile portal.',
+        reportedTime: formattedDate,
+        assignedAmbulance: 'Amb A-102',
+        assignedPolice: 'POL-17',
+        nearestHospital: 'PGIMER Chandigarh',
+        status: 'Responder On Route',
+        responseTime: '4.0 Min'
+      };
+    }
 
     setEmergencies(prev => [newReport, ...prev]);
-    showToast(`🚨 Incident ${newId} logged! Dispatches mobilized to ${newReport.sector}.`, 'success');
-    addNotification(`🚨 Emergency ${newId} reported in ${newReport.sector} (${newReport.type})`, 'error');
+    showToast(`🚨 Incident ${newReport.id} logged! Dispatches mobilized to ${newReport.sector}.`, 'success');
+    addNotification(`🚨 Emergency ${newReport.id} reported in ${newReport.sector} (${newReport.type})`, 'error');
 
-    return newId;
-  }, [setEmergencies, showToast, addNotification]);
+    return newReport.id;
+  }, [setEmergencies, showToast, addNotification, postEmergency]);
 
   // Handle View Route polyline calculation
   const drawRoute = useCallback((originCoords, destinationCoords, responderName) => {
@@ -114,6 +129,15 @@ export function EmergencyProvider({ children }) {
   const clearRoute = useCallback(() => {
     setSelectedRoute(null);
   }, []);
+
+  // Update an existing emergency record (partial update)
+  const updateEmergency = useCallback((id, updates) => {
+    setEmergencies(prev => {
+      const updated = prev.map(e => (e.id !== id ? e : { ...e, ...updates }));
+      return updated;
+    });
+    showToast(`✅ Incident ${id} updated`, 'success');
+  }, [setEmergencies, showToast]);
 
   // Simulator Loop (Every 6 seconds)
   useEffect(() => {
@@ -149,7 +173,19 @@ export function EmergencyProvider({ children }) {
     return () => clearInterval(timer);
   }, [setAmbulances, addNotification]);
 
-  // Derived Analytics Data using useMemo
+  useEffect(() => {
+  // Fetch initial data from backend, fallback to mock if unavailable
+  (async () => {
+    const hospitalsData = await getHospitals();
+    if (hospitalsData) setHospitals(hospitalsData);
+    const ambulancesData = await getAmbulances();
+    if (ambulancesData) setAmbulances(ambulancesData);
+    const agencyData = await getAgencyOfficers();
+    // Currently we keep static policeUnits; you can store agencyData if needed.
+  })();
+}, []);
+
+// Derived Analytics Data using useMemo
   const stats = useMemo(() => {
     const total = emergencies.length;
     const active = emergencies.filter(e => e.status !== 'Resolved').length;
@@ -186,7 +222,8 @@ export function EmergencyProvider({ children }) {
       triggerSimulatedCall,
       addEmergencyReport,
       drawRoute,
-      clearRoute
+      clearRoute,
+      updateEmergency,
     }}>
       {children}
     </EmergencyContext.Provider>

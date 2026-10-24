@@ -12,6 +12,7 @@ import LoginModal from './components/LoginModal';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Pages
+import NotFoundPage from './pages/NotFoundPage';
 import HomePage from './pages/HomePage';
 import CommandCenterPage from './pages/CommandCenterPage';
 import EmergencyReportPage from './pages/EmergencyReportPage';
@@ -27,7 +28,8 @@ import AboutPage from './pages/AboutPage';
 import ContactPage from './pages/ContactPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/LoginPage';
-import NotFoundPage from './pages/NotFoundPage';
+import AccessDeniedPage from './pages/AccessDeniedPage';
+
 
 export default function App() {
   const [loginModalOpen, setLoginModalOpen] = useState(false);
@@ -47,22 +49,56 @@ export default function App() {
                   <Route path="/emergency" element={<EmergencyReportPage />} />
                   <Route path="/emergency/:id" element={<EmergencyDetailPage />} />
                   
-                  {/* Protected Admin Route */}
+                  {/* Protected Routes with role restrictions */}
                   <Route path="/dashboard" element={
-                    <ProtectedRoute>
+                    <ProtectedRoute allowedRoles={['citizen','dispatcher','responder','hospital','police','admin']}>
                       <DashboardPage />
                     </ProtectedRoute>
                   } />
-                  
-                  <Route path="/hospitals" element={<HospitalsPage />} />
-                  <Route path="/ambulances" element={<AmbulancesPage />} />
-                  <Route path="/police" element={<PolicePage />} />
-                  <Route path="/fire" element={<FirePage />} />
-                  <Route path="/history" element={<HistoryPage />} />
-                  <Route path="/reports" element={<ReportsPage />} />
+                  <Route path="/command-center" element={
+                    <ProtectedRoute allowedRoles={['dispatcher','admin']}>
+                      <CommandCenterPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/hospitals" element={
+                    <ProtectedRoute allowedRoles={['hospital','admin','dispatcher']}>
+                      <HospitalsPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/ambulances" element={
+                    <ProtectedRoute allowedRoles={['responder','admin']}>
+                      <AmbulancesPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/police" element={
+                    <ProtectedRoute allowedRoles={['police','admin']}>
+                      <PolicePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/fire" element={
+                    <ProtectedRoute allowedRoles={['police','admin']}>
+                      <FirePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/history" element={
+                    <ProtectedRoute allowedRoles={['citizen','dispatcher','admin']}>
+                      <HistoryPage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/reports" element={
+                    <ProtectedRoute allowedRoles={['dispatcher','admin','police']}>
+                      <ReportsPage />
+                    </ProtectedRoute>
+                  } />
                   <Route path="/about" element={<AboutPage />} />
                   <Route path="/contact" element={<ContactPage />} />
-                  <Route path="/profile" element={<ProfilePage />} />
+                  <Route path="/profile" element={
+                    <ProtectedRoute allowedRoles={['citizen','dispatcher','responder','hospital','police','admin']}>
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/login" element={<LoginPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
                   <Route path="/login" element={<LoginPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
