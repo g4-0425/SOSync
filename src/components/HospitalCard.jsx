@@ -1,39 +1,52 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useEmergency } from '../context/EmergencyContext';
-import { MapPin, Phone, Bed, UserCheck, Star, Navigation } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { MapPin, Phone, Star, Navigation, Hospital } from 'lucide-react';
+import HospitalRequestModal from '../components/HospitalRequestModal';
 
 export default function HospitalCard({ hospital }) {
-  const { drawRoute, showToast, triggerSimulatedCall } = useEmergency();
+  const { drawRoute, showToast, triggerSimulatedCall, addHospitalRequest } = useEmergency();
+  const { user } = useAuth();
+  const [modalOpen, setModalOpen] = useState(false);
 
   const handleRouteClick = () => {
-    // Standard Chandigarh coordinate center
     drawRoute(hospital.coords, [30.7390, 76.7590], hospital.name);
     showToast(`Navigating to ${hospital.name} in Sector ${hospital.sector}`, 'info');
   };
 
+  const handleSubmitRequest = (incidentId, notes) => {
+    addHospitalRequest({
+      incidentId: incidentId || null,
+      hospitalId: hospital.id,
+      details: { notes },
+    });
+    setModalOpen(false);
+  };
+
   return (
-    <div className="glass-panel" style={{
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden'
-    }}>
+    <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ height: 180, overflow: 'hidden', position: 'relative' }}>
-        <img 
-          src={`/src/assets/${hospital.image}`} 
-          alt={hospital.name} 
+        <img
+          src={`/src/assets/${hospital.image}`}
+          alt={hospital.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
         />
-        <div style={{
-          position: 'absolute',
-          top: 12,
-          right: 12,
-          padding: '0.25rem 0.65rem',
-          borderRadius: 20,
-          fontSize: '0.75rem',
-          fontWeight: 700,
-          background: hospital.status === 'Available' ? 'rgba(34, 197, 94, 0.9)' : 'rgba(245, 158, 11, 0.9)',
-          color: '#FFF'
-        }}>
+        <div
+          style={{
+            position: 'absolute',
+            top: 12,
+            right: 12,
+            padding: '0.25rem 0.65rem',
+            borderRadius: 20,
+            fontSize: '0.75rem',
+            fontWeight: 700,
+            background:
+              hospital.status === 'Available'
+                ? 'rgba(34, 197, 94, 0.9)'
+                : 'rgba(245, 158, 11, 0.9)',
+            color: '#FFF',
+          }}
+        >
           {hospital.status}
         </div>
       </div>
@@ -53,16 +66,18 @@ export default function HospitalCard({ hospital }) {
           </div>
         </div>
 
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr 1fr',
-          gap: '0.5rem',
-          background: 'rgba(255, 255, 255, 0.03)',
-          border: '1px solid var(--border-color)',
-          borderRadius: 'var(--border-radius-sm)',
-          padding: '0.75rem',
-          textAlign: 'center'
-        }}>
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr 1fr',
+            gap: '0.5rem',
+            background: 'rgba(255, 255, 255, 0.03)',
+            border: '1px solid var(--border-color)',
+            borderRadius: 'var(--border-radius-sm)',
+            padding: '0.75rem',
+            textAlign: 'center',
+          }}
+        >
           <div>
             <div style={{ fontSize: '0.7rem', color: 'var(--text-light)' }}>ER Beds</div>
             <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--color-primary)' }}>{hospital.bedsAvailable}</div>
@@ -78,16 +93,33 @@ export default function HospitalCard({ hospital }) {
         </div>
 
         <div style={{ marginTop: 'auto', display: 'flex', gap: '0.75rem' }}>
-          <button onClick={() => triggerSimulatedCall('Hospital', hospital.name)} className="btn btn-secondary" style={{ flexGrow: 1, padding: '0.6rem', fontSize: '0.8rem' }}>
-            <Phone size={14} />
-            Call ER
+          <button
+            onClick={() => setModalOpen(true)}
+            className="btn btn-success"
+            style={{ flexGrow: 1, padding: '0.6rem', fontSize: '0.8rem' }}
+          >
+            <Hospital size={14} /> Request Assistance
+          </button>
+          <button
+            onClick={() => triggerSimulatedCall('Hospital', hospital.name)}
+            className="btn btn-secondary"
+            style={{ flexGrow: 1, padding: '0.6rem', fontSize: '0.8rem' }}
+          >
+            <Phone size={14} /> Call ER
           </button>
           <button onClick={handleRouteClick} className="btn btn-primary" style={{ flexGrow: 1, padding: '0.6rem', fontSize: '0.8rem' }}>
-            <Navigation size={14} />
-            View Route
+            <Navigation size={14} /> View Route
           </button>
         </div>
       </div>
+
+      <HospitalRequestModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        hospitalId={hospital.id}
+        preselectedIncidentId={null}
+        onSubmit={handleSubmitRequest}
+      />
     </div>
   );
 }

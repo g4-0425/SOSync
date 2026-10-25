@@ -1,4 +1,5 @@
 import React from 'react';
+import { Navigate } from 'react-router-dom';
 import { useEmergency } from '../context/EmergencyContext';
 import { useAuth } from '../context/AuthContext';
 import StatCard from '../components/StatCard';
@@ -19,8 +20,13 @@ import {
 } from 'lucide-react'; 
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+  // Redirect citizens to their My Emergencies page
+  if (user?.role === 'citizen') {
+    return <Navigate to="/my-emergencies" replace />;
+  }
   const { stats, emergencies, ambulances, hospitals } = useEmergency();
-  const { isAuthenticated, user, login } = useAuth();
+  const { isAuthenticated, login } = useAuth();
 
   if (!isAuthenticated) {
     return (

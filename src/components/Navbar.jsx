@@ -3,16 +3,16 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useEmergency } from '../context/EmergencyContext';
-import { 
-  Sun, 
-  Moon, 
-  Search, 
-  AlertOctagon, 
-  Menu, 
-  X, 
-  Bell, 
-  User, 
-  LogOut, 
+import {
+  Sun,
+  Moon,
+  Search,
+  AlertOctagon,
+  Menu,
+  X,
+  Bell,
+  User,
+  LogOut,
   ShieldAlert,
   MapPin,
   HeartPulse,
@@ -93,8 +93,15 @@ export default function Navbar({ onOpenLogin }) {
             // Role‑specific navigation configuration
             const roleLinks = {
               citizen: [
+                { to: '/my-emergencies', label: 'My Emergencies' },
+                { to: '/hospitals', label: 'Hospitals' },
+                { to: '/my-requests', label: 'My Hospital Requests' }
+              ],
+              admin: [
+                { to: '/officer-requests', label: 'Officer Requests' },
                 { to: '/dashboard', label: 'Dashboard' },
-                { to: '/history', label: 'History' }
+                { to: '/reports', label: 'Reports' },
+                { to: '/history', label: 'Emergency History' }
               ],
               dispatcher: [
                 { to: '/command-center', label: 'Command Center' },
@@ -112,17 +119,14 @@ export default function Navbar({ onOpenLogin }) {
               police: [
                 { to: '/dashboard', label: 'Dashboard' },
                 { to: '/reports', label: 'Reports' }
-              ],
-              admin: [
-                { to: '/admin', label: 'Admin Panel' },
-                { to: '/dashboard', label: 'Dashboard' }
               ]
             };
 
             // Build final link list based on authentication and role
             let links = [...commonLinks];
-            if (isAuthenticated && user?.role && roleLinks[user.role]) {
-              links = links.concat(roleLinks[user.role]);
+            const userRoleKey = user?.role?.toLowerCase();
+            if (isAuthenticated && userRoleKey && roleLinks[userRoleKey]) {
+              links = links.concat(roleLinks[userRoleKey]);
             }
 
             // Add public informational pages (About, Contact) for all users
@@ -211,7 +215,7 @@ export default function Navbar({ onOpenLogin }) {
             className="btn btn-sos" 
             style={{ 
               padding: '0.6rem 1.1rem', 
-              fontSize: '0.85rem', 
+              fontSize: '0.85rem',
               backgroundColor: '#DC2626',
               border: 'none',
               cursor: 'pointer',

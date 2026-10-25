@@ -1,12 +1,23 @@
 import React, { createContext, useContext } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import useStore from '../store';
 
+// Auth context provides authentication state and actions.
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useLocalStorage('sosync_auth_user', null);
+  // Zustand store for auth state.
+  const { user, isAuthenticated, login: storeLogin, logout: storeLogout } = useStore(state => ({
+    user: state.user,
+    isAuthenticated: state.isAuthenticated,
+    login: state.login,
+    logout: state.logout,
+  }));
+
+  // Local storage for registered demo citizens (non‑demo accounts).
   const [registeredUsers, setRegisteredUsers] = useLocalStorage('sosync_registered_users', []);
 
+  // Hard‑coded demo accounts for quick login.
   const demoAccounts = [
     { email: 'dispatcher@example.com', password: 'dispatch123', role: 'Dispatcher', name: 'Demo Dispatcher' },
     { email: 'ambulance@example.com', password: 'ambulance123', role: 'Ambulance', name: 'Demo Ambulance' },
@@ -30,39 +41,36 @@ export function AuthProvider({ children }) {
       (acc.badgeId && acc.badgeId === identifier)
     );
     if (demo && demo.password === password) {
-      const mockUser = {
-        id: identifier,
-        name: demo.name,
-        role: demo.role,
-        token: 'LOCAL-JWT-SESSION-SECURE-2026',
-        loginTime: new Date().toLocaleTimeString(),
-      };
-      setUser(mockUser);
-      return { success: true, user: mockUser };
+      // Normalize role names for routing/authorization
+      let normalizedRole = demo.role;
+      if (['Admin Officer', 'Officer', 'AdminOfficer'].includes(demo.role)) {
+        normalizedRole = 'admin';
+      } else if (['Dispatcher', 'dispatcher'].includes(demo.role)) {
+        normalizedRole = 'dispatcher';
+      } else if (['Police', 'police'].includes(demo.role)) {
+        normalizedRole = 'police';
+      } else if (['HospitalStaff', 'hospital'].includes(demo.role)) {
+        normalizedRole = 'hospital';
+      } else if (['Ambulance', 'responder'].includes(demo.role)) {
+        normalizedRole = 'responder';
+      }
+      // Use store login, passing the normalized role.
+      return storeLogin(identifier, password, normalizedRole);
     }
-
     const citizen = registeredUsers.find(u => u.email === identifier && u.password === password);
     if (citizen) {
-      const loggedInUser = {
-        id: citizen.email,
-        name: citizen.name,
-        role: 'Citizen',
-        token: 'LOCAL-JWT-SESSION-SECURE-2026',
-        loginTime: new Date().toLocaleTimeString(),
-      };
-      setUser(loggedInUser);
-      return { success: true, user: loggedInUser };
+      // Citizen role handled inside store as default 'Citizen'.
+      return storeLogin(identifier, password, 'citizen');
     }
-
     return { success: false, message: 'Invalid credentials' };
   };
 
   const logout = () => {
-    setUser(null);
+    storeLogout();
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, register, registeredUsers }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, register, registeredUsers }}>
       {children}
     </AuthContext.Provider>
   );

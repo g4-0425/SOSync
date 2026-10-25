@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useEmergency } from '../context/EmergencyContext';
 import { Shield, Lock, User } from 'lucide-react';
@@ -10,8 +10,8 @@ export default function LoginPage() {
   const { showToast } = useEmergency();
   const navigate = useNavigate();
 
-  const [identifier, setIdentifier] = useState('OFFICER-101'); // badgeId or email
-  const [passcode, setPasscode] = useState('sosync2026');
+  const [identifier, setIdentifier] = useState(''); // badgeId or email
+  const [passcode, setPasscode] = useState('');
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -24,7 +24,7 @@ export default function LoginPage() {
   const validate = () => {
     const newErrors = {};
     if (!identifier.trim()) newErrors.identifier = 'Badge ID or Email required';
-    if (!passcode.trim()) newErrors.passcode = 'Passcode required';
+    if (!passcode.trim()) newErrors.passcode = 'Password required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -40,18 +40,18 @@ export default function LoginPage() {
       // Role‑based redirect
       let target = '/dashboard';
       switch (result.user.role) {
-        case 'Dispatcher':
-        case 'Administrator':
-        case 'Citizen':
+        case 'dispatcher':
+        case 'admin':
+        case 'citizen':
           target = '/dashboard';
           break;
-        case 'Ambulance':
+        case 'responder':
           target = '/ambulances';
           break;
-        case 'HospitalStaff':
+        case 'hospital':
           target = '/hospitals';
           break;
-        case 'Police':
+        case 'police':
           target = '/police';
           break;
         default:
@@ -71,8 +71,8 @@ export default function LoginPage() {
             <div style={{ width: 54, height: 54, borderRadius: '50%', background: 'rgba(220,38,38,0.15)', color: 'var(--color-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem auto' }}>
               <Shield size={28} />
             </div>
-            <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Agency Officer Login</h2>
-            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Enter your officer badge token to access the encrypted Admin Dashboard.</p>
+            <h2 style={{ fontSize: '1.6rem', fontWeight: 800 }}>Login</h2>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Enter your badge ID or email and password to continue.</p>
           </div>
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             <FormInput
@@ -88,7 +88,7 @@ export default function LoginPage() {
             />
             <FormInput
               id="passcode"
-              label="Passcode"
+              label="Password"
               type="password"
               name="passcode"
               value={passcode}
@@ -97,15 +97,13 @@ export default function LoginPage() {
               icon={Lock}
               error={errors.passcode}
             />
-            <button
-              type="submit"
-              className="btn btn-primary"
-              style={{ padding: '0.9rem', opacity: isSubmitting ? 0.6 : 1 }}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Signing in…' : 'Login to Console'}
+            <button type="submit" className="btn btn-primary" style={{ padding: '0.9rem', opacity: isSubmitting ? 0.6 : 1 }} disabled={isSubmitting}>
+              {isSubmitting ? 'Signing in…' : 'Login'}
             </button>
           </form>
+          <div style={{ marginTop: '1rem', textAlign: 'center', fontSize: '0.85rem' }}>
+            New citizen? <Link to="/register" style={{ color: 'var(--color-primary)' }}>Register here</Link>
+          </div>
         </div>
       </div>
     </div>

@@ -1,199 +1,40 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
-import { getHospitals, getAmbulances, getAgencyOfficers, postEmergency } from '../utils/apiClient';
-import { useLocalStorage } from '../hooks/useLocalStorage';
-import {
-  initialEmergencies,
-  initialHospitals,
-  initialAmbulances,
-  initialPoliceUnits,
-  initialFireStations,
-  initialNotifications
-} from '../data/mockDatabase';
+import React, { createContext, useContext, useMemo } from 'react';
+import useStore from '../store';
 
+// Emergency context provides shared state and actions via Zustand store.
 const EmergencyContext = createContext();
 
 export function EmergencyProvider({ children }) {
-  const [emergencies, setEmergencies] = useLocalStorage('sosync_emergencies', initialEmergencies);
-  const [hospitals, setHospitals] = useLocalStorage('sosync_hospitals', initialHospitals);
-  const [ambulances, setAmbulances] = useLocalStorage('sosync_ambulances', initialAmbulances);
-  const [policeUnits] = useState(initialPoliceUnits);
-  const [fireStations] = useState(initialFireStations);
-  const [notifications, setNotifications] = useState(initialNotifications);
+  const {
+    emergencies,
+    hospitals,
+    ambulances,
+    policeUnits,
+    fireStations,
+    notifications,
+    selectedRoute,
+    toast,
+    hospitalRequests,
+    // actions
+    addEmergency,
+    updateEmergency,
+    addHospitalRequest,
+    updateHospitalRequestStatus,
+    addNotification,
+    showToast,
+    triggerSimulatedCall,
+    drawRoute,
+    clearRoute,
+  } = useStore();
 
-  // Active route for Leaflet polyline drawing
-  const [selectedRoute, setSelectedRoute] = useState(null);
-
-  // Toast notifications manager
-  const [toast, setToast] = useState(null);
-
-  const showToast = useCallback((message, type = 'info') => {
-    setToast({ id: Date.now(), message, type });
-    setTimeout(() => setToast(null), 4000);
-  }, []);
-
-  const triggerSimulatedCall = useCallback((targetName, targetDetail = '') => {
-    let message = '';
-    if (targetName && targetName.startsWith('Calling')) {
-      message = targetName;
-    } else if (targetDetail) {
-      message = `Calling ${targetName} — ${targetDetail}`;
-    } else {
-      message = `Calling ${targetName}`;
-    }
-
-    setToast({
-      id: Date.now(),
-      message,
-      type: 'call'
-    });
-
-    setTimeout(() => {
-      setToast(prev => (prev && prev.type === 'call' ? null : prev));
-    }, 2500);
-  }, []);
-
-  const addNotification = useCallback((text, type = 'info') => {
-    const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-    setNotifications(prev => [
-      { id: `NOTIF-${Date.now()}`, time: timeStr, text, type },
-      ...prev.slice(0, 15)
-    ]);
-  }, []);
-
-  // Add new emergency report
-  const addEmergencyReport = useCallback(async (reportData) => {
-    let backendResult = null;
-    try {
-      backendResult = await postEmergency(reportData);
-    } catch (e) {
-      console.warn('Backend postEmergency error', e);
-    }
-    // If backend returns a created emergency, use it; otherwise fallback to mock generation
-    const fallbackId = `EMG-${Math.floor(1000 + Math.random() * 9000)}`;
-    const now = new Date();
-    const formattedDate = `${now.toISOString().split('T')[0]} ${now.toLocaleTimeString()}`;
-
-    // Random sector coordinates in Chandigarh
-    const sectorsCoords = {
-      "Sector 17": [30.7431, 76.7790],
-      "Sector 22": [30.7390, 76.7590],
-      "Sector 35": [30.7190, 76.7420],
-      "Sector 43": [30.7140, 76.7230],
-      "Sector 15": [30.7480, 76.7650],
-      "Sector 26": [30.7460, 76.7960]
-    };
-
-    const targetCoords = sectorsCoords[reportData.sector] || [30.7333 + (Math.random() - 0.5) * 0.04, 76.7794 + (Math.random() - 0.5) * 0.04];
-
-    let newReport;
-    if (backendResult && backendResult.id) {
-      // Assume backend returns full emergency object
-      newReport = backendResult;
-    } else {
-      
-      newReport = {
-        id: fallbackId,
-        reporterName: reportData.fullName || 'Anonymous Citizen',
-        reporterPhone: reportData.phone || '+91 99000 00000',
-        type: reportData.emergencyType || 'General Emergency',
-        sector: reportData.sector || 'Sector 22',
-        coords: targetCoords,
-        priority: reportData.priority || 'High',
-        description: reportData.description || 'Emergency alert logged via mobile portal.',
-        reportedTime: formattedDate,
-        assignedAmbulance: 'Amb A-102',
-        assignedPolice: 'POL-17',
-        nearestHospital: 'PGIMER Chandigarh',
-        status: 'Responder On Route',
-        responseTime: '4.0 Min'
-      };
-    }
-
-    setEmergencies(prev => [newReport, ...prev]);
-    showToast(`🚨 Incident ${newReport.id} logged! Dispatches mobilized to ${newReport.sector}.`, 'success');
-    addNotification(`🚨 Emergency ${newReport.id} reported in ${newReport.sector} (${newReport.type})`, 'error');
-
-    return newReport.id;
-  }, [setEmergencies, showToast, addNotification, postEmergency]);
-
-  // Handle View Route polyline calculation
-  const drawRoute = useCallback((originCoords, destinationCoords, responderName) => {
-    setSelectedRoute({
-      origin: originCoords,
-      destination: destinationCoords,
-      responder: responderName
-    });
-    showToast(`🗺️ Telemetry Polyline generated for ${responderName}`, 'info');
-  }, [showToast]);
-
-  const clearRoute = useCallback(() => {
-    setSelectedRoute(null);
-  }, []);
-
-  // Update an existing emergency record (partial update)
-  const updateEmergency = useCallback((id, updates) => {
-    setEmergencies(prev => {
-      const updated = prev.map(e => (e.id !== id ? e : { ...e, ...updates }));
-      return updated;
-    });
-    showToast(`✅ Incident ${id} updated`, 'success');
-  }, [setEmergencies, showToast]);
-
-  // Simulator Loop (Every 6 seconds)
-  useEffect(() => {
-    const timer = setInterval(() => {
-      // 1. Shift ambulance coordinates slightly
-      setAmbulances(prev => prev.map(amb => {
-        if (amb.status === 'On Route') {
-          const latShift = (Math.random() - 0.5) * 0.002;
-          const lngShift = (Math.random() - 0.5) * 0.002;
-          const updatedLat = amb.coords[0] + latShift;
-          const updatedLng = amb.coords[1] + lngShift;
-          
-          return {
-            ...amb,
-            coords: [updatedLat, updatedLng],
-            eta: `${Math.max(1, parseInt(amb.eta, 10) - 1 || 4)} Min`
-          };
-        }
-        return amb;
-      }));
-
-      // 2. Push periodic mock updates to feed
-      const actions = [
-        () => addNotification("🚑 Ambulance A-101 telemetry updated in Sector 22", "info"),
-        () => addNotification("🏥 PGIMER Chandigarh accepted incoming ICU transfer", "success"),
-        () => addNotification("🚒 Fire Station FS-17 confirmed standby alert readiness", "info"),
-        () => addNotification("👮 Police Patrol POL-34 clear at Sector 35 junction", "success")
-      ];
-      const randomAction = actions[Math.floor(Math.random() * actions.length)];
-      randomAction();
-    }, 6000);
-
-    return () => clearInterval(timer);
-  }, [setAmbulances, addNotification]);
-
-  useEffect(() => {
-  // Fetch initial data from backend, fallback to mock if unavailable
-  (async () => {
-    const hospitalsData = await getHospitals();
-    if (hospitalsData) setHospitals(hospitalsData);
-    const ambulancesData = await getAmbulances();
-    if (ambulancesData) setAmbulances(ambulancesData);
-    const agencyData = await getAgencyOfficers();
-    // Currently we keep static policeUnits; you can store agencyData if needed.
-  })();
-}, []);
-
-// Derived Analytics Data using useMemo
+  // Derived analytics similar to previous implementation.
   const stats = useMemo(() => {
     const total = emergencies.length;
     const active = emergencies.filter(e => e.status !== 'Resolved').length;
     const resolved = emergencies.filter(e => e.status === 'Resolved').length;
     const critical = emergencies.filter(e => e.priority === 'Critical').length;
     const activeAmbulances = ambulances.filter(a => a.status === 'Available').length;
-    const availableBeds = hospitals.reduce((acc, h) => acc + h.bedsAvailable, 0);
-
+    const availableBeds = hospitals.reduce((acc, h) => acc + (h.bedsAvailable || 0), 0);
     return {
       total,
       active,
@@ -203,28 +44,37 @@ export function EmergencyProvider({ children }) {
       availableBeds,
       totalHospitals: hospitals.length,
       totalPolice: policeUnits.length,
-      totalFire: fireStations.length
+      totalFire: fireStations.length,
     };
   }, [emergencies, ambulances, hospitals, policeUnits, fireStations]);
 
+  // Preserve the previous API shape so existing components keep working.
+  const value = {
+    emergencies,
+    hospitals,
+    ambulances,
+    policeUnits,
+    fireStations,
+    notifications,
+    selectedRoute,
+    toast,
+    stats,
+    showToast,
+    triggerSimulatedCall,
+    // original name used in components
+    addEmergencyReport: addEmergency,
+    drawRoute,
+    clearRoute,
+    updateEmergency,
+    addHospitalRequest,
+    updateHospitalRequestStatus,
+    addNotification,
+    // expose hospitalRequests for My Hospital Requests page
+    hospitalRequests,
+  };
+
   return (
-    <EmergencyContext.Provider value={{
-      emergencies,
-      hospitals,
-      ambulances,
-      policeUnits,
-      fireStations,
-      notifications,
-      selectedRoute,
-      toast,
-      stats,
-      showToast,
-      triggerSimulatedCall,
-      addEmergencyReport,
-      drawRoute,
-      clearRoute,
-      updateEmergency,
-    }}>
+    <EmergencyContext.Provider value={value}>
       {children}
     </EmergencyContext.Provider>
   );
