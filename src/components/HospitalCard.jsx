@@ -4,6 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { MapPin, Phone, Star, Navigation, Hospital } from 'lucide-react';
 import HospitalRequestModal from '../components/HospitalRequestModal';
 
+// Static imports for hospital images (Vite resolves these at build time)
+import cityHospitalImg from '../assets/city_hospital.png';
+import traumaCenterImg from '../assets/trauma_center.png';
+import emergencyCareImg from '../assets/emergency_care.png';
+// fallback uses cityHospital image if any specific image missing
+const fallbackImg = cityHospitalImg;
+
 export default function HospitalCard({ hospital }) {
   const { drawRoute, showToast, triggerSimulatedCall, addHospitalRequest } = useEmergency();
   const { user } = useAuth();
@@ -23,13 +30,22 @@ export default function HospitalCard({ hospital }) {
     setModalOpen(false);
   };
 
+  // Map image filename to imported asset
+  const imageMap = {
+    'city_hospital.png': cityHospitalImg,
+    'trauma_center.png': traumaCenterImg,
+    'emergency_care.png': emergencyCareImg,
+  };
+  const imgSrc = imageMap[hospital.image] || fallbackImg;
+
   return (
     <div className="glass-panel" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div style={{ height: 180, overflow: 'hidden', position: 'relative' }}>
         <img
-          src={`/src/assets/${hospital.image}`}
+          src={imgSrc}
           alt={hospital.name}
           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+          onError={(e) => { e.target.src = fallbackImg; }}
         />
         <div
           style={{
