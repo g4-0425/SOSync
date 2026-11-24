@@ -38,19 +38,24 @@ public class ConsoleUtil {
     }
 
     /** Returns an ANSI colour based on emergency priority. */
-    public static String colorForPriority(int priority) {
-        // Lower number = higher priority (1 is most critical)
+    public static String colorForEmergency(int priority, String status) {
+        // Resolved status overrides priority colour
+        if ("Resolved".equalsIgnoreCase(status)) {
+            return BRIGHT_GREEN; // neutral/green for resolved
+        }
+        // Determine colour based on priority when not resolved
         switch (priority) {
             case 1:
                 return BRIGHT_RED; // Critical
             case 2:
-                return YELLOW; // High
+                return YELLOW; // High (using yellow as orange approximation)
             case 3:
-                return BRIGHT_YELLOW; // Medium
+                return BLUE; // Medium
             case 4:
-                return GREEN; // Low
+                return BRIGHT_BLACK; // Low (grey approximation)
             default:
                 return WHITE;
         }
     }
+
 }

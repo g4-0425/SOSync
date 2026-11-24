@@ -198,9 +198,34 @@ public class Main {
     private static void updateEmergencyStatus() throws SQLException {
         int id = readInt("Enter Emergency ID: ");
         String newStatus = readLine("Enter new status: ");
-        emergencyDAO.updateEmergencyStatus(id, newStatus);
-        System.out.println("Status updated.");
+        if ("Resolved".equalsIgnoreCase(newStatus)) {
+            try {
+                emergencyDAO.resolveEmergency(id);
+                System.out.println("Emergency resolved and related updates committed.");
+            } catch (EmergencyNotFoundException e) {
+                System.err.println("Error: " + e.getMessage());
+            }
+        } else {
+            emergencyDAO.updateEmergencyStatus(id, newStatus);
+            System.out.println("Status updated.");
+        }
     }
+
+
+// private static void updateEmergencyStatus() throws SQLException {
+//     int id = readInt("Enter Emergency ID: ");
+
+//     try {
+//         emergencyDAO.resolveEmergencyWithFailure(id);
+//         System.out.println("Unexpected: Transaction completed.");
+//     } catch (EmergencyNotFoundException e) {
+//         System.err.println("Error: " + e.getMessage());
+//     } catch (SQLException e) {
+//         System.out.println("Rollback test: " + e.getMessage());
+//     }
+// }
+
+
 
     private static void deleteEmergency() throws SQLException {
         int id = readInt("Enter Emergency ID to delete: ");
@@ -378,7 +403,7 @@ public class Main {
         System.out.println(header);
         System.out.println("-".repeat(header.length()));
         for (Emergency e : list) {
-            String colour = ConsoleUtil.colorForPriority(e.getPriority());
+            String colour = ConsoleUtil.colorForEmergency(e.getPriority(), e.getStatus());
             String row = String.format("%-5d | %-15s | %-12s | %-8d | %-10s | %s",
                     e.getId(), e.getType(), e.getLocation(), e.getPriority(), e.getStatus(), e.getDescription());
             ConsoleUtil.printColored(row + "\n", colour);

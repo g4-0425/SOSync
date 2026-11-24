@@ -19,6 +19,130 @@ public class EmergencyDAO {
     private static final String SELECT_BY_TYPE_SQL = "SELECT * FROM emergencies WHERE type = ?";
     private static final String UPDATE_SQL = "UPDATE emergencies SET type = ?, description = ?, priority = ?, status = ?, location = ?, reported_at = ? WHERE id = ?";
     private static final String UPDATE_STATUS_SQL = "UPDATE emergencies SET status = ? WHERE id = ?";
+    public void resolveEmergencyWithFailure(int emergencyId) throws SQLException, EmergencyNotFoundException {
+        // Same as resolveEmergency but forces a failure to demonstrate rollback
+        try (Connection conn = DBConnection.getConnection()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+            try {
+                // Verify existence and get current status
+                String currentStatus;
+                try (PreparedStatement ps = conn.prepareStatement("SELECT status FROM emergencies WHERE id = ?")) {
+                    ps.setInt(1, emergencyId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            throw new EmergencyNotFoundException("Emergency with ID " + emergencyId + " not found.");
+                        }
+                        currentStatus = rs.getString("status");
+                        if ("Resolved".equalsIgnoreCase(currentStatus)) {
+                            throw new SQLException("Emergency already resolved.");
+                        }
+                    }
+                }
+                // Update emergency status to Resolved
+                try (PreparedStatement ps = conn.prepareStatement(UPDATE_STATUS_SQL)) {
+                    ps.setString(1, "Resolved");
+                    ps.setInt(2, emergencyId);
+                    ps.executeUpdate();
+                }
+                // Insert into status_history
+                try (PreparedStatement ps = conn.prepareStatement(INSERT_HISTORY_SQL)) {
+                    ps.setInt(1, emergencyId);
+                    ps.setString(2, currentStatus);
+                    ps.setString(3, "Resolved");
+                    ps.executeUpdate();
+                }
+                // Find assigned unit (if any)
+                int unitId = -1;
+                try (PreparedStatement ps = conn.prepareStatement("SELECT unit_id FROM emergency_assignments WHERE emergency_id = ?")) {
+                    ps.setInt(1, emergencyId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            unitId = rs.getInt("unit_id");
+                        }
+                    }
+                }
+                // Update unit availability to true if assigned
+                if (unitId != -1) {
+                    try (PreparedStatement ps = conn.prepareStatement(UPDATE_UNIT_AVAIL_SQL)) {
+                        ps.setBoolean(1, true);
+                        ps.setInt(2, unitId);
+                        ps.executeUpdate();
+                    }
+                }
+                // Simulated failure
+                throw new SQLException("Simulated failure to test rollback");
+            } catch (SQLException | EmergencyNotFoundException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(originalAutoCommit);
+            }
+        }
+    }
+
+    public void resolveEmergency(int emergencyId) throws SQLException, EmergencyNotFoundException { // Transaction: update status, insert history, update assigned unit availability
+        try (Connection conn = DBConnection.getConnection()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
+            conn.setAutoCommit(false);
+            try {
+                // Verify existence and get current status
+                String currentStatus;
+                try (PreparedStatement ps = conn.prepareStatement("SELECT status FROM emergencies WHERE id = ?")) {
+                    ps.setInt(1, emergencyId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (!rs.next()) {
+                            throw new EmergencyNotFoundException("Emergency with ID " + emergencyId + " not found.");
+                        }
+                        currentStatus = rs.getString("status");
+                        if ("Resolved".equalsIgnoreCase(currentStatus)) {
+                            throw new SQLException("Emergency already resolved.");
+                        }
+                    }
+                }
+                // Update emergency status to Resolved
+                try (PreparedStatement ps = conn.prepareStatement(UPDATE_STATUS_SQL)) {
+                    ps.setString(1, "Resolved");
+                    ps.setInt(2, emergencyId);
+                    ps.executeUpdate();
+                }
+                // Insert into status_history
+                try (PreparedStatement ps = conn.prepareStatement(INSERT_HISTORY_SQL)) {
+                    ps.setInt(1, emergencyId);
+                    ps.setString(2, currentStatus);
+                    ps.setString(3, "Resolved");
+                    ps.executeUpdate();
+                }
+                // Find assigned unit (if any)
+                int unitId = -1;
+                try (PreparedStatement ps = conn.prepareStatement("SELECT unit_id FROM emergency_assignments WHERE emergency_id = ?")) {
+                    ps.setInt(1, emergencyId);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) {
+                            unitId = rs.getInt("unit_id");
+                        }
+                    }
+                }
+                // Update unit availability to true if assigned
+                if (unitId != -1) {
+                    try (PreparedStatement ps = conn.prepareStatement(UPDATE_UNIT_AVAIL_SQL)) {
+                        ps.setBoolean(1, true);
+                        ps.setInt(2, unitId);
+                        ps.executeUpdate();
+                    }
+                }
+                conn.commit();
+            } catch (SQLException | EmergencyNotFoundException e) {
+                conn.rollback();
+                throw e;
+            } finally {
+                conn.setAutoCommit(originalAutoCommit);
+            }
+        }
+    }
+
+    private static final String INSERT_HISTORY_SQL = "INSERT INTO status_history (emergency_id, old_status, new_status) VALUES (?,?,?)";
+    private static final String UPDATE_UNIT_AVAIL_SQL = "UPDATE response_units SET available = ? WHERE id = ?";
     private static final String DELETE_SQL = "DELETE FROM emergencies WHERE id = ?";
 
     public void addEmergency(Emergency e) throws SQLException {
